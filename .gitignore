@@ -1,0 +1,11 @@
+node_modules/
+logs/
+*.log
+*.zip
+!add-on-roblox-animations-importer-exporter-v2.6.3.zip
+.viewcode-context.json
+.viewcoder-context.json
+.DS_Store
+Thumbs.db
+analytics-server/data/
+.viewcoder/

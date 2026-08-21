@@ -1,0 +1,134 @@
+{
+  "manifest_version": 3,
+  "name": "ViewCoder Studio Agent",
+  "version": "1.0.0",
+  "description": "Connect supported AI chats to Roblox Studio and Blender workflows through a local MCP bridge.",
+  "permissions": ["storage", "tabs", "alarms"],
+  "host_permissions": [
+    "https://chat.deepseek.com/*",
+    "https://deepseek.com/*",
+    "https://gemini.google.com/*",
+    "https://kimi.moonshot.cn/*",
+    "https://www.kimi.com/*",
+    "https://kimi.com/*",
+    "https://chat.z.ai/*",
+    "https://chat.qwen.ai/*",
+    "https://arena.ai/*",
+    "https://lmarena.ai/*",
+    "https://www.lmarena.ai/*",
+    "https://www.meta.ai/*",
+    "https://meta.ai/*",
+    "https://chatgpt.com/*",
+    "https://chat.openai.com/*",
+    "https://claude.ai/*",
+    "http://127.0.0.1:3000/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "ViewCoder Studio Agent",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://chat.qwen.ai/*"],
+      "js": ["providers/qwen-net.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://chat.deepseek.com/*"],
+      "js": ["core/config.js", "core/parser.js", "core/image-relay.js", "providers/deepseek.js", "core/main.js"],
+      "css": ["overlay.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://gemini.google.com/*"],
+      "js": ["core/config.js", "core/parser.js", "core/image-relay.js", "providers/gemini.js", "core/main.js"],
+      "css": ["overlay.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://kimi.moonshot.cn/*", "https://www.kimi.com/*", "https://kimi.com/*"],
+      "js": ["core/config.js", "core/parser.js", "core/image-relay.js", "providers/kimi.js", "core/main.js"],
+      "css": ["overlay.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://chat.z.ai/*"],
+      "js": ["core/config.js", "core/parser.js", "core/image-relay.js", "providers/glm.js", "core/main.js"],
+      "css": ["overlay.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://chat.qwen.ai/*"],
+      "js": ["core/config.js", "core/parser.js", "core/image-relay.js", "providers/qwen.js", "core/main.js"],
+      "css": ["overlay.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://arena.ai/*", "https://lmarena.ai/*", "https://www.lmarena.ai/*"],
+      "js": ["core/config.js", "core/parser.js", "core/image-relay.js", "providers/arena.js", "core/main.js"],
+      "css": ["overlay.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.meta.ai/*", "https://meta.ai/*"],
+      "js": ["core/config.js", "core/parser.js", "core/image-relay.js", "providers/meta.js", "core/main.js"],
+      "css": ["overlay.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://chatgpt.com/*", "https://chat.openai.com/*"],
+      "js": ["core/config.js", "core/parser.js", "core/image-relay.js", "providers/meta.js", "core/main.js"],
+      "css": ["overlay.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://claude.ai/*"],
+      "js": ["core/config.js", "core/parser.js", "core/image-relay.js", "providers/claude.js", "core/main.js"],
+      "css": ["overlay.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/viewcoder-logo.png", "icons/ui/agent-mode.png", "icons/ui/active.png", "icons/ui/blender.webp"],
+      "matches": [
+        "https://chat.deepseek.com/*",
+        "https://deepseek.com/*",
+        "https://gemini.google.com/*",
+        "https://kimi.moonshot.cn/*",
+        "https://www.kimi.com/*",
+        "https://kimi.com/*",
+        "https://chat.z.ai/*",
+        "https://chat.qwen.ai/*",
+        "https://arena.ai/*",
+        "https://lmarena.ai/*",
+        "https://www.lmarena.ai/*",
+        "https://www.meta.ai/*",
+        "https://meta.ai/*",
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://claude.ai/*"
+      ]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}

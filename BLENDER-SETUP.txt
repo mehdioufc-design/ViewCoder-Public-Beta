@@ -1,0 +1,100 @@
+VIEWCODER + BLENDER (OPTIONAL)
+================================
+
+Roblox Studio works without Blender. Connect Blender only when you want the AI
+to have both apps available at the same time.
+
+1. Install uv for the companion MCP server:
+   https://docs.astral.sh/uv/getting-started/installation/
+
+2. Install the Blender MCP add-on bundled inside this release. Double-click:
+
+   install-blender-mcp-addon.bat
+
+   The installer copies `Blender MCP Add-on\blender_mcp.py` into the newest
+   Blender user-version folder. It does not download or back up another copy.
+   The upstream MIT license and telemetry/privacy terms are bundled beside it.
+
+3. Restart Blender after installation. Alternatively, open Edit > Preferences >
+   Add-ons, disable and re-enable "Interface: Blender MCP".
+
+4. In Blender's 3D View, open the BlenderMCP sidebar and start the server on
+   port 9876. Keep Blender open.
+
+5. Run ViewCoder's start.bat, open the in-chat ViewCoder settings panel, then
+   click Connect Blender. Merely opening Blender is not enough: ViewCoder shows
+   Blender as Ready only after the add-on protocol handshake succeeds.
+
+ANIMATION MODE
+--------------
+
+Animation Mode (Beta) requires Blender to show Ready. Open ViewCoder's
+AI/settings panel from the in-chat status bar, turn Animation Mode on, then
+click Import Rig. ViewCoder imports only the bundled BlockyCharacter.fbx; there
+are no R6/R15, body, Rthro, skinned-avatar, or My Avatar choices.
+
+Import is intentionally destructive. ViewCoder first asks whether you are sure
+you want to switch to Animation Mode and warns that everything in the current
+Blender project will be deleted. Save the .blend file before accepting. If you
+cancel, Blender is not changed.
+
+After confirmation, ViewCoder clears the current Blender scene, imports and
+validates the supplied 51-bone armature and 15 deforming body meshes, opens
+Blender's Animation workspace, centers it on X=0 and Y=0, grounds it at Z=0,
+selects the complete rig, frames it
+in the 3D viewport, and prepares frames 1-240. It reports success only after
+Blender returns a source-backed verification receipt. See
+`Roblox Rig Library\SOURCES.md` for exact source files and hashes.
+
+While Animation Mode is enabled, ViewCoder restricts new mutations to
+animation-related work. You may switch modes while the current AI agent is
+active. Import Rig always uses the same bundled FBX.
+
+When Roblox Studio and Blender both show Ready, the AI sees both sets of live
+tools. It chooses between them from the requested result and tool capabilities;
+there is no keyword trigger. If it builds a custom mesh in Blender, the
+viewcoder_import_blender_scene handoff imports visible mesh objects into the
+open Studio place as anchored EditableMesh MeshParts.
+
+The automatic handoff preserves object placement, modifiers, basic material
+colors, and mesh geometry. Blender procedural materials, armatures, animations,
+and image textures are not converted by the current handoff.
+
+Security: ViewCoder blocks model-authored Blender code that accesses the file
+system, shell, network, or dynamic code execution. Do not disable that guard
+unless you have reviewed the exact code yourself.
+
+ROBLOX ANIMATION IMPORT / EXPORT ADD-ON
+---------------------------------------
+
+The release includes the original upstream installable archive at the package
+root, where it is easy to find:
+
+   add-on-roblox-animations-importer-exporter-v2.6.3.zip
+
+In Blender 4.2 or newer, open Edit > Preferences > Get Extensions or Add-ons,
+choose Install from Disk, select that ZIP, and enable
+"Roblox Animations Importer/Exporter". The add-on is maintained by Cautioned,
+declares GPL-3.0-or-later, and requests network, file, and optional clipboard
+permissions for Roblox OAuth, rig/animation transfer, and import/export. Its
+GPL v3 license text is included as ROBLOX-ANIMATIONS-ADDON-GPL-3.0.txt.
+
+A verified extracted copy is also included in:
+
+   Roblox Animations Add-on\
+
+That folder contains the original add-on package structure, including
+blender_manifest.toml and __init__.py. It is provided for inspection and
+redistribution compliance. For the simplest installation, use the top-level
+ZIP with Blender's Install from Disk action rather than selecting individual
+files from the extracted folder.
+
+To transfer finished animations into Roblox Studio, install the companion
+Roblox plugin from its official Creator Store page:
+
+   https://create.roblox.com/store/asset/16708835782/Blender-Animations-ultimate-edition
+
+The animation add-on and Roblox plugin are third-party projects. ViewCoder does
+not install the Studio plugin automatically and is not affiliated with their
+maintainer. Review their permissions and save both Roblox and Blender projects
+before an import/export operation.

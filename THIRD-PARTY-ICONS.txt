@@ -1,0 +1,22 @@
+THIRD-PARTY UI ICON NOTICE
+
+The files in ViewCoder Extension/icons/ui are selected from:
+Free Icon Pack v3.1 (Basic), by @gvesster
+https://linktr.ee/gvesster
+
+Included icons:
+- active.png (Rocket 1st Outline)
+- check.png (Checkmark 1st Outline)
+- provider.png (Chat 1st Outline)
+- studio.png (Gamepad 1st Outline)
+
+The supplied pack license permits use in commercial, client, personal, and
+non-commercial projects and permits editing for personal projects. Attribution
+is optional but appreciated. ViewCoder does not claim ownership of these icon
+assets, and the assets may not be resold or redistributed as an icon pack.
+
+Additional supplied asset:
+- blender.webp — supplied by the ViewCoder publisher for this release and used
+  for the Blender Link control. ViewCoder does not claim ownership of the
+  Blender name or logo. The publisher is responsible for confirming permission
+  to redistribute this supplied image.

@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ViewCoder</title>
+    <link rel="stylesheet" href="./popup.css">
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <img class="brand-mark" src="../icons/icon32.png" alt="" width="20" height="20">
+        <strong>ViewCoder</strong>
+        <span id="extension-version">v1.0.0</span>
+      </div>
+      <span class="connection-dot is-offline" title="Connection health"></span>
+    </header>
+
+    <main>
+      <section class="bridge" aria-labelledby="bridge-title">
+        <div class="bridge-heading">
+          <span class="studio-icon" aria-hidden="true"><img src="../icons/ui/studio-roblox.svg" alt=""></span>
+          <div>
+            <strong id="bridge-title">Studio Link</strong>
+            <span class="bridge-state">Reading connection...</span>
+          </div>
+        </div>
+        <p class="bridge-detail">Local channel &rarr; Roblox Studio</p>
+        <div class="bridge-actions" hidden>
+          <button class="bridge-recheck" type="button">&#8635; Check connection</button>
+          <button class="studio-restart" type="button">&#8635; Refresh Studio link</button>
+        </div>
+        <p class="feedback" role="status">Open a supported AI chat to begin.</p>
+      </section>
+
+      <section class="bridge blender-bridge" aria-labelledby="blender-title">
+        <div class="bridge-heading">
+          <span class="studio-icon blender-icon" aria-hidden="true"><img src="../icons/ui/blender.webp" alt=""></span>
+          <div>
+            <strong id="blender-title">Blender Link <span class="beta-tag">Beta</span></strong>
+            <span class="blender-state">Optional connection</span>
+          </div>
+        </div>
+        <p class="bridge-detail blender-detail">Local creative workspace</p>
+        <div class="bridge-actions">
+          <button class="blender-toggle" type="button">Connect Blender</button>
+        </div>
+        <p class="feedback blender-feedback" role="status">Roblox Studio continues working when Blender is offline.</p>
+      </section>
+
+      <section class="creative-modes" aria-labelledby="creative-modes-title" hidden>
+        <div class="creative-modes-heading">
+          <div>
+            <strong id="creative-modes-title">Creative Modes <span class="beta-tag">Beta</span></strong>
+            <span>Switch either mode at any time.</span>
+          </div>
+        </div>
+        <div class="creative-mode-grid">
+          <article class="creative-mode animation-mode">
+            <div class="creative-mode-title">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2.2"></circle><path d="M12 7.2v5.1m0 0-4.5 3.2m4.5-3.2 4.5 3.2m-4.5-3.2-3.2-3m3.2 3 3.2-3M7.5 15.5 6 21m10.5-5.5L18 21"></path></svg>
+              <strong>Animation Mode</strong>
+            </div>
+            <span>Blocky Roblox animation rig</span>
+            <button class="creative-mode-toggle animation-mode-toggle" type="button" role="switch" aria-checked="false" aria-label="Toggle Animation Mode"><span aria-hidden="true"></span></button>
+          </article>
+          <article class="creative-mode icon-mode is-enabled">
+            <div class="creative-mode-title">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 1.6 6.4L20 10l-6.4 1.6L12 18l-1.6-6.4L4 10l6.4-1.6z"></path><path d="m19 16 .7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7z"></path></svg>
+              <strong>AI Generated UI</strong>
+            </div>
+            <span>Separate transparent UI components</span>
+            <button class="creative-mode-toggle icon-mode-toggle" type="button" role="switch" aria-checked="true" aria-label="Toggle AI Generated UI"><span aria-hidden="true"></span></button>
+          </article>
+        </div>
+        <p class="icon-mode-note">Image-capable AIs create each panel, button, header, badge, or icon as its own transparent PNG. When off or unavailable, the AI decides whether a suitable matching preset icon helps.</p>
+        <p class="creative-mode-feedback" role="status">AI Generated UI is on.</p>
+
+        <div class="rig-chooser" hidden>
+          <div class="rig-chooser-head">
+            <div>
+              <strong>Animation rig</strong>
+              <span>Blocky Roblox character</span>
+            </div>
+            <span class="rig-blender-badge">Blender</span>
+          </div>
+
+          <p class="rig-destructive-warning">Importing replaces everything in the current Blender project, opens the Animation workspace, and places the rig at world origin.</p>
+          <button class="rig-import" type="button">Import Rig</button>
+          <p class="rig-import-status" role="status">Save your .blend file before importing.</p>
+        </div>
+      </section>
+
+      <section class="active-mode-card" aria-labelledby="active-mode-title" hidden>
+        <div class="active-mode-copy">
+          <span class="active-mode-heading">
+            <img class="mode-icon" src="../icons/ui/active.png" alt="">
+            <strong id="active-mode-title">Active Mode <span class="beta-tag">Beta</span></strong>
+          </span>
+          <span>Keep the current task moving in another tab</span>
+        </div>
+        <button class="active-mode-toggle" type="button" role="switch" aria-checked="true" aria-label="Toggle Active Mode"><span aria-hidden="true"></span></button>
+        <p>ViewCoder keeps only the task-owning AI tab responsive, never steals focus, and always respects Stop.</p>
+      </section>
+
+      <p class="section-label">Choose another AI</p>
+      <nav class="providers" aria-label="AI providers"></nav>
+    </main>
+
+    <footer>
+      Local connection <span aria-hidden="true">&bull;</span> private on this PC
+      <span aria-hidden="true">&bull;</span> Studio or Blender MCP
+    </footer>
+
+    <script src="../shared/providers.js"></script>
+    <script src="./popup.js"></script>
+  </body>
+</html>

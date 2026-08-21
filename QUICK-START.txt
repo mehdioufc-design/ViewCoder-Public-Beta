@@ -1,0 +1,37 @@
+VIEWCODER v1.0.0 - QUICK START
+===============================
+
+Before you begin
+----------------
+1. Extract the whole ViewCoder ZIP. Do not run it from inside the ZIP.
+2. Install Node.js 18 or newer: https://nodejs.org/
+3. Save important Roblox Studio and Blender projects. This is a public beta.
+
+Start ViewCoder
+---------------
+1. In Roblox Studio, enable "Studio as MCP server" if you want Roblox tools.
+2. Double-click start.bat and leave the terminal window open.
+3. Open chrome://extensions or edge://extensions.
+4. Turn on Developer mode.
+5. Click Load unpacked and choose the ViewCoder Extension folder.
+6. Open a supported AI chat and click Start ViewCoder.
+
+Supported AI chats
+------------------
+ChatGPT, Claude, DeepSeek, Gemini, Kimi, Z.ai/GLM, Qwen, LMSYS Arena, and Meta AI.
+
+Optional Blender tools
+----------------------
+Blender is not required for Roblox-only use. For Blender and Animation Mode,
+follow BLENDER-SETUP.txt. The required add-ons are included in this folder.
+
+Updating later
+--------------
+Stop the old start.bat window, replace the old files, run the new start.bat,
+reload the unpacked extension, and refresh every open AI tab.
+
+Help
+----
+Discord: https://discord.gg/VRcg7RBpV
+Full guide: README.md
+Beta precautions: BETA-NOTICE.txt

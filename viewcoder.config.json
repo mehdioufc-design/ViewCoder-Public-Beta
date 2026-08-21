@@ -1,0 +1,22 @@
+{
+  "servers": {
+    "blender": {
+      "enabled": false,
+      "command": "cmd.exe",
+      "args": [
+        "/d",
+        "/s",
+        "/c",
+        "uvx",
+        "--with",
+        "mcp[cli]==1.29.0",
+        "blender-mcp"
+      ],
+      "env": {
+        "BLENDER_HOST": "127.0.0.1",
+        "BLENDER_PORT": "9876",
+        "DISABLE_TELEMETRY": "true"
+      }
+    }
+  }
+}

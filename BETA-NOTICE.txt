@@ -1,0 +1,46 @@
+VIEWCODER v1.0.0 — FIRST PUBLIC BETA
+====================================
+
+ViewCoder v1.0.0 is an initial public beta. The major new Agent/Plan, Active
+Mode, Animation Mode, AI Generated UI, Blender Link, and mixed Studio/Blender workflow
+features may contain bugs or need updates when supported AI websites, Roblox
+Studio, Blender, or their MCP interfaces change.
+
+Important precautions:
+
+- Save or copy important .rbxl/.rbxlx and .blend projects before automation.
+- Animation Mode asks for confirmation because Import Rig deletes all current
+  Blender scene content, opens the Animation workspace, and replaces it with
+  the bundled Blocky Character rig. Cancelling leaves Blender unchanged.
+- Keep start.bat, the unpacked extension, and the bridge from this exact v1.0.0
+  package together. After an update, restart start.bat, reload the unpacked
+  extension, and refresh the AI tab.
+- Blender is connected only after the live MCP add-on handshake succeeds. Merely
+  opening Blender does not establish a ViewCoder connection.
+- AI Generated UI depends on the selected AI. The current image-capable chat AI
+  itself uses its native image generator to create one separate transparent PNG
+  per UI component. It follows the user's requested style or chooses a suitable
+  coherent style when none is specified. It waits up to 3 minutes 30 seconds for
+  each native render to finish, permits at most 3 attempts and at most 2
+  background/alpha validation failures, then automatically switches to
+  code-native UI. After a successful render or an exhausted fallback, ViewCoder
+  asks before upload, assembly, or code-native construction. Text-only AIs show
+  the mode as unavailable. In code-native
+  mode, the AI uses a semantically matching preset icon only when it decides
+  that an icon is suitable.
+- The local game icon packs were supplied without complete license documents.
+  Review GAME-ICON-LIBRARY-NOTICE.txt before redistribution or commercial use.
+- The bundled Blender MCP add-on and Roblox animation importer/exporter are
+  third-party software with their own license, permissions, telemetry/privacy,
+  and support terms.
+- Verify important changes in Roblox Studio or Blender before publishing a game
+  or overwriting production work.
+
+ViewCoder runs a local bridge on 127.0.0.1. It is provided without a guarantee
+that every provider layout, external add-on, or future application version will
+remain compatible.
+
+Community and support:
+
+- Discord: https://discord.gg/VRcg7RBpV
+- Donate Robux: https://www.roblox.com/users/8651250465/profile
