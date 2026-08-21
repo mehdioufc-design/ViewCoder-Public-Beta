@@ -11,7 +11,7 @@ commands to the project open on your computer.
 ## Download
 
 Download the ready-to-use ZIP from the
-[latest GitHub release](https://github.com/mehdioufc-design/ViewCoder-Public-Beta/releases/latest).
+[v1.0.0 First Public Beta release](https://github.com/mehdioufc-design/ViewCoder-Public-Beta/releases/tag/v1.0.0).
 Extract the whole ZIP before starting it.
 
 ## Quick setup
