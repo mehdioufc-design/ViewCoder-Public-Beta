@@ -19,6 +19,16 @@
   globalThis.__viewcoderAgentCoreLoaded = true;
   const P = ZSProvider;
   const T = P.timings;
+  // These providers share ZeroScript's proven activity-card lifecycle: every
+  // host mutation schedules a full, idempotent classification pass, internal
+  // turns are pre-hidden in the observer microtask, and a 1.5 s repair sweep
+  // restores cards removed by virtualization. Keep ChatGPT, Meta AI and Claude
+  // on ViewCoder's newer scoped lifecycle because ZeroScript has no equivalent
+  // adapter behavior for those surfaces.
+  const ZERO_ACTIVITY_LIFECYCLE_PROVIDERS = new Set([
+    "deepseek", "gemini", "kimi", "glm", "qwen", "arena",
+  ]);
+  const useZeroActivityLifecycle = ZERO_ACTIVITY_LIFECYCLE_PROVIDERS.has(P.id);
   // Hidden provider tabs can have page timers clamped for many seconds. Keep
   // ordinary waits locally cheap, but make them externally wakeable by the MV3
   // service worker so Active Mode can re-check exact watchdog deadlines.
@@ -6973,7 +6983,7 @@
   let lastComposerEnforceAt = 0;
   let lastSessionSyncAt = 0;
   function scheduleSweep(forceFull = false) {
-    if (forceFull) fullSweepRequested = true;
+    if (forceFull || useZeroActivityLifecycle) fullSweepRequested = true;
     if (sweepScheduled) return;
     sweepScheduled = true;
     const run = () => {
@@ -7004,6 +7014,14 @@
     const activelyWorking =
       A.starting || A.injecting || A.awaitingReply || A.running ||
       A.toolRunning || A.stopping;
+    // ZeroScript does not throttle foreground card reconciliation. Running the
+    // already-debounced full pass on the next paint is what makes a streamed
+    // command become a card promptly and keeps it mounted through host churn.
+    if (useZeroActivityLifecycle) {
+      if (document.hidden) setTimeout(run, 100);
+      else requestAnimationFrame(run);
+      return;
+    }
     const minSweepMs = document.hidden
       ? (A.activeMode && activelyWorking
           ? 450
@@ -7044,11 +7062,13 @@
         diag("result.prehide", { users: users.length });
       }
     }
-    // Only newly rendered tail turns can expose a fresh internal message. A full
-    // history walk here used to run for every streaming mutation and became very
-    // expensive in long chats; periodic full sweeps still repair restored history.
-    const tail = items.length > 20 ? items.slice(-20) : items;
-    for (const item of tail) {
+    // ZeroScript scans the provider's complete rendered message set in the
+    // observer microtask. The excluded providers retain ViewCoder's bounded
+    // tail scan because their long-chat DOMs need the newer scoped lifecycle.
+    const visibleItems = useZeroActivityLifecycle
+      ? items
+      : (items.length > 20 ? items.slice(-20) : items);
+    for (const item of visibleItems) {
       if (item.classList.contains("zs-hidden")) continue;
       const txt = P.classifyText(item, ".zs-chip");
       if (hasSystemMarker(txt) ||
@@ -7086,6 +7106,13 @@
     return !!target?.closest?.("#zs-root, #zs-input-cover, .zs-chip");
   }
   const mo = new MutationObserver((mutations) => {
+    if (useZeroActivityLifecycle) {
+      // Match ZeroScript's lifecycle exactly for the supported adapters: do not
+      // depend on a fragile dirty-node association, and pre-hide before paint.
+      preHideWholeItems();
+      scheduleSweep(true);
+      return;
+    }
     if (mutations.length && mutations.every(mutationIsViewCoderOnly)) return;
     decorate.noteMutations(mutations);
     // Full item classification on every streaming token was the largest
@@ -7102,15 +7129,18 @@
   });
   mo.observe(document.documentElement, { childList: true, subtree: true });
   // Belt-and-braces: a low-frequency sweep regardless of tab visibility or
-  // mutation timing, so camouflage always converges. Active Mode shortens this
-  // only while a real task is already running.
+  // mutation timing, so camouflage always converges. The six ZeroScript-backed
+  // providers keep its 1.5 s cadence; excluded providers retain ViewCoder's
+  // lower-frequency long-chat repair pass.
   let periodicFullSweepTimer = null;
   function schedulePeriodicFullSweep() {
     clearTimeout(periodicFullSweepTimer);
     const activelyWorking =
       A.starting || A.injecting || A.awaitingReply || A.running ||
       A.toolRunning || A.stopping;
-    const delay = A.activeMode && activelyWorking ? 5_500 : 10_000;
+    const delay = useZeroActivityLifecycle
+      ? 1_500
+      : (A.activeMode && activelyWorking ? 5_500 : 10_000);
     periodicFullSweepTimer = setTimeout(() => {
       scheduleSweep(true);
       schedulePeriodicFullSweep();

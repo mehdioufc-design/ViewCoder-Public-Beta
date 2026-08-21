@@ -62,4 +62,27 @@ assert(claude.includes('[data-testid="assistant-message"]'), "Claude lacks the s
 assert(claude.includes("for (const reply of document.querySelectorAll(S.reply))"), "Claude cannot retain settled replies after streaming ends.");
 assert(claude.includes("lastAssistantId"), "Claude lacks stable assistant-turn identity.");
 
+const core = read("ViewCoder Extension/core/main.js");
+const lifecycleMatch = core.match(
+  /const ZERO_ACTIVITY_LIFECYCLE_PROVIDERS = new Set\(\[([\s\S]*?)\]\);/,
+);
+assert(lifecycleMatch, "The ZeroScript activity-card lifecycle provider set is missing.");
+const lifecycleProviders = [...lifecycleMatch[1].matchAll(/"([^"]+)"/g)].map((match) => match[1]);
+assert.deepEqual(
+  lifecycleProviders,
+  ["deepseek", "gemini", "kimi", "glm", "qwen", "arena"],
+  "ZeroScript activity-card lifecycle scope drifted.",
+);
+for (const excluded of ["meta", "chatgpt", "claude"]) {
+  assert(!lifecycleProviders.includes(excluded), `${excluded} must keep ViewCoder's native activity lifecycle.`);
+}
+assert(
+  /if \(useZeroActivityLifecycle\) \{[\s\S]*?preHideWholeItems\(\);[\s\S]*?scheduleSweep\(true\);[\s\S]*?return;/.test(core),
+  "ZeroScript-backed providers no longer pre-hide and fully classify every host mutation.",
+);
+assert(
+  core.includes("const delay = useZeroActivityLifecycle\n      ? 1_500"),
+  "ZeroScript-backed providers lost the 1.5-second card repair cadence.",
+);
+
 console.log("Nine-provider manifest, selector, and runtime-contract compatibility test passed.");

@@ -345,6 +345,24 @@ assert(read("animation-rig.mjs").includes("rig.hide_set(True)"), "The Blender ar
 assert(read("animation-rig.mjs").includes('rig["viewcoder_armature_hidden"] = True'), "The hidden-armature state is not verified.");
 
 const main = read("ViewCoder Extension/core/main.js");
+const zeroLifecycleMatch = main.match(
+  /const ZERO_ACTIVITY_LIFECYCLE_PROVIDERS = new Set\(\[([\s\S]*?)\]\);/,
+);
+assert(zeroLifecycleMatch, "The scoped ZeroScript activity lifecycle provider set is missing.");
+const zeroLifecycleProviders = [...zeroLifecycleMatch[1].matchAll(/"([^"]+)"/g)]
+  .map((match) => match[1]);
+assert(
+  JSON.stringify(zeroLifecycleProviders) === JSON.stringify(["deepseek", "gemini", "kimi", "glm", "qwen", "arena"]),
+  `Unexpected ZeroScript activity lifecycle scope: ${zeroLifecycleProviders.join(", ")}`,
+);
+for (const excluded of ["meta", "chatgpt", "claude"]) {
+  assert(!zeroLifecycleProviders.includes(excluded), `${excluded} must retain ViewCoder's native activity lifecycle.`);
+}
+assert(
+  /if \(useZeroActivityLifecycle\) \{[\s\S]*?preHideWholeItems\(\);[\s\S]*?scheduleSweep\(true\);[\s\S]*?return;/.test(main),
+  "Scoped providers no longer pre-hide and fully reconcile every host mutation.",
+);
+assert(main.includes("const delay = useZeroActivityLifecycle\n      ? 1_500"), "Scoped providers lost ZeroScript's 1.5-second repair cadence.");
 assert(main.includes('{ server: "all" }'), "Startup does not request the complete all-server catalog.");
 assert(main.includes("ZS.toolsReminder(A.toolList)"), "Long-chat reminders do not retain the live catalog.");
 assert(main.includes("async function parkHiddenLuau()"), "Long Lua is not protected while the provider tab is hidden.");
