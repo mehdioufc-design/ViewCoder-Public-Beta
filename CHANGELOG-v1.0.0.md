@@ -6,6 +6,11 @@ ViewCoder v1.0.0 is the first public beta. Major beta features may need updates
 as supported AI websites, Roblox Studio, Blender, and their MCP interfaces
 change.
 
+- Fixed the ChatGPT 43-second continuation recovery so it now presses
+  ViewCoder's own Stop pathway, releases both the native response and
+  ViewCoder's composer lock, verifies the idle composer, and automatically
+  submits the existing safe continuation prompt without cancelling the agent.
+
 - Fixed both durable 43-second recovery paths so their deadline performs the
   recovery action instead of only displaying a notice. ViewCoder now presses
   the AI site's native Stop control, verifies a stable released composer, and

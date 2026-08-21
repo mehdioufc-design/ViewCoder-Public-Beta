@@ -449,10 +449,15 @@ const stalledRelease = main.slice(
 assert(stalledRelease.includes('diag("tool.resultReplyStoppingStall", { forced: true })'), "The stalled-reply watchdog does not force a provider Stop action.");
 assert(stalledRelease.includes('const shouldStop = attempt < 3'), "The stalled-reply watchdog does not retry the native Stop action.");
 assert(stalledRelease.includes('P.stopGeneration?.()'), "The stalled-reply watchdog never clicks the provider native Stop control.");
+assert(stalledRelease.includes('document.querySelector("#zs-root #zs-stop")'), "The stalled-reply watchdog does not press ViewCoder's own Stop control.");
+assert(stalledRelease.includes('stopLoop({ recovery: true })'), "The stalled-reply watchdog lacks a fallback into ViewCoder's recovery Stop path.");
 assert(!stalledRelease.includes('if (!busy) return true;'), "A false provider busy flag can still bypass the first forced Stop action.");
 assert(stalledRelease.includes('P.isBusyNow?.() === true'), "Stalled-reply release does not verify all provider busy signals.");
 assert(stalledRelease.includes('Date.now() - quietSince >= 900'), "Stalled-reply release does not verify a stable idle composer before continuing.");
 assert(main.includes('diag("tool.resultReplyStopFailed"'), "A failed provider release can still inject the continuation prompt into a locked composer.");
+assert(main.includes('const recovery = options.recovery === true || A.recoveryStopRequested === true'), "ViewCoder Stop does not distinguish watchdog recovery from a user cancellation.");
+assert(main.includes('setInputLocked(false);\n      try { P.stopGeneration(); } catch {}\n      return;'), "The watchdog recovery Stop does not unlock ViewCoder before stopping the provider.");
+assert(main.includes('const activeWork = !A.recoveryStopping && ('), "The activity meter can re-lock the composer while watchdog recovery is pressing Stop.");
 assert(main.includes('receiptNeedsRecovery'), "Retryable bridge timeout/running results are not classified for recovery.");
 assert(main.includes('pendingReceiptDispatches.delete(outcome.tracked)'), "Settled receipt promises can still poison later retry races.");
 assert(main.includes('receiptRetries >= TOOL_RECEIPT_MAX_RETRIES'), "The receipt recovery loop is not bounded at eight retries.");

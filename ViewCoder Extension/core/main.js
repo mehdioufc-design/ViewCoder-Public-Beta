@@ -282,6 +282,12 @@
     // clears it - the live generation signal toggles off/on as the loop drains,
     // which otherwise made the Stop button vanish then reappear.
     stopping: false,
+    // recoveryStopping is the watchdog's non-destructive equivalent of the
+    // user's red ViewCoder Stop button. It releases the provider and our own
+    // composer cover/lock, but deliberately keeps the agent loop alive so the
+    // existing continuation note can be submitted immediately afterwards.
+    recoveryStopping: false,
+    recoveryStopRequested: false,
     // userStopped: the user deliberately halted generation - via our "■ Stop"
     // button OR the site's native stop. While set, the auto-resume watchdog
     // must NOT relaunch or re-run a tool from the halted turn.
@@ -3033,6 +3039,15 @@
     // read false. That was why the correct continuation note remained queued
     // until the user manually pressed Stop.
     diag("tool.resultReplyStoppingStall", { forced: true });
+    // Use ViewCoder's own Stop control path first. A manual click worked because
+    // it released both ChatGPT's native response and ViewCoder's composer lock;
+    // calling only provider.stopGeneration() left the recovery prompt queued
+    // behind our gray Working cover. The recovery flag makes this click soft:
+    // it must not cancel the agent or mark the completed command as stopped.
+    A.recoveryStopRequested = true;
+    const ownStop = document.querySelector("#zs-root #zs-stop");
+    if (ownStop && !ownStop.disabled) ownStop.click();
+    else stopLoop({ recovery: true });
     let busy = true;
     let editorReady = false;
     let quietSince = 0;
@@ -3060,12 +3075,21 @@
         if (!quietSince) quietSince = Date.now();
         // Require a stable idle composer, rather than trusting the first React
         // frame after Stop. The next step writes the existing recovery prompt.
-        if (Date.now() - quietSince >= 900) return true;
+        if (Date.now() - quietSince >= 900) {
+          A.recoveryStopping = false;
+          A.suppressProviderGen = false;
+          ui.showStop(true);
+          return true;
+        }
       } else {
         quietSince = 0;
       }
     }
-    return !busy && editorReady;
+    const released = !busy && editorReady;
+    A.recoveryStopping = false;
+    if (released) A.suppressProviderGen = false;
+    ui.showStop(A.running || A.toolRunning);
+    return released;
   }
 
   async function agentLoop(base) {
@@ -3948,7 +3972,26 @@
     }
   }
 
-  function stopLoop() {
+  function stopLoop(options = {}) {
+    const recovery = options.recovery === true || A.recoveryStopRequested === true;
+    A.recoveryStopRequested = false;
+    if (recovery) {
+      // Mirror the useful parts of the user's ViewCoder Stop click without
+      // setting A.stop/userStopped or cancelling the bridge job. The watchdog
+      // still owns the task and will auto-submit its continuation after the
+      // provider exposes a stable idle composer.
+      diag("stopLoop.recovery");
+      A.recoveryStopping = true;
+      A.stopAt = Date.now();
+      A.stopStreamLen = P.streamLen ? P.streamLen() : 0;
+      A.injectHideUntil = 0;
+      A.suppressProviderGen = true;
+      ui.markStopping();
+      ui.inputCover(false);
+      setInputLocked(false);
+      try { P.stopGeneration(); } catch {}
+      return;
+    }
     if (A.stopping) {
       try { P.stopGeneration(); } catch {}
       armStopRetries();
@@ -6717,7 +6760,7 @@
         diag("stop.quiet"); // drain over: site quiet, Stopping… released
       }
     }
-    const activeWork =
+    const activeWork = !A.recoveryStopping && (
       A.starting ||
       A.injecting ||
       A.awaitingReply ||
@@ -6729,7 +6772,8 @@
       // isHardGenerating() alone kept ViewCoder's cover over the composer and
       // made it look as though the AI was still working. Provider isGenerating()
       // retains genuine long reasoning while filtering known stale controls.
-      (A.started && uiGen);
+      (A.started && uiGen)
+    );
     setInputLocked(activeWork);
     ui.showStop(activeWork);
 
