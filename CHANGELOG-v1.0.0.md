@@ -6,6 +6,12 @@ ViewCoder v1.0.0 is the first public beta. Major beta features may need updates
 as supported AI websites, Roblox Studio, Blender, and their MCP interfaces
 change.
 
+- Fixed both durable 43-second recovery paths so their deadline performs the
+  recovery action instead of only displaying a notice. ViewCoder now presses
+  the AI site's native Stop control, verifies a stable released composer, and
+  either reclaims the same idempotent command receipt or submits the existing
+  safe continuation note without repeating completed Studio or Blender work.
+
 - Added a universal command gateway across every supported AI. Complete
   rendered command blocks now become the existing ViewCoder activity card and
   are validated against the live synchronized catalog before bridge dispatch.

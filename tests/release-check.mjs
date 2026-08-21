@@ -442,10 +442,23 @@ assert(main.includes('diag("tool.resultReplyNudge"'), "Post-result continuation 
 assert(main.includes('Do not repeat or re-run the completed Studio/Blender command.'), "Post-result recovery can accidentally repeat a completed mutation.");
 assert(main.includes('progressWatchdog?.arm(Date.now() + PROGRESS_TIMEOUT)'), "Actual assistant progress does not re-arm the 43-second watchdog.");
 assert(main.includes('releaseStalledProviderReply'), "A frozen provider reply is not released before its safe continuation nudge.");
+const stalledRelease = main.slice(
+  main.indexOf('async function releaseStalledProviderReply()'),
+  main.indexOf('async function agentLoop(base)'),
+);
+assert(stalledRelease.includes('diag("tool.resultReplyStoppingStall", { forced: true })'), "The stalled-reply watchdog does not force a provider Stop action.");
+assert(stalledRelease.includes('const shouldStop = attempt < 3'), "The stalled-reply watchdog does not retry the native Stop action.");
+assert(stalledRelease.includes('P.stopGeneration?.()'), "The stalled-reply watchdog never clicks the provider native Stop control.");
+assert(!stalledRelease.includes('if (!busy) return true;'), "A false provider busy flag can still bypass the first forced Stop action.");
+assert(stalledRelease.includes('P.isBusyNow?.() === true'), "Stalled-reply release does not verify all provider busy signals.");
+assert(stalledRelease.includes('Date.now() - quietSince >= 900'), "Stalled-reply release does not verify a stable idle composer before continuing.");
+assert(main.includes('diag("tool.resultReplyStopFailed"'), "A failed provider release can still inject the continuation prompt into a locked composer.");
 assert(main.includes('receiptNeedsRecovery'), "Retryable bridge timeout/running results are not classified for recovery.");
 assert(main.includes('pendingReceiptDispatches.delete(outcome.tracked)'), "Settled receipt promises can still poison later retry races.");
 assert(main.includes('receiptRetries >= TOOL_RECEIPT_MAX_RETRIES'), "The receipt recovery loop is not bounded at eight retries.");
 assert(main.includes('startReceiptDispatch();'), "The 43-second receipt recovery does not retry the command.");
+assert(main.includes('const providerReleasedForReceipt = await releaseStalledProviderReply()'), "The other 43-second watchdog does not force-release a stale provider response before reclaiming the command receipt.");
+assert(main.includes('diag("tool.receiptProviderRelease"'), "The command-receipt watchdog recovery action is not observable.");
 assert(main.includes('waitForWatchdogDeadline('), "Command receipt recovery lacks a durable background-tab deadline.");
 assert(background.includes('const WATCHDOG_ALARM_PREFIX = "viewcoder-watchdog:"'), "The service worker watchdog alarm namespace is missing.");
 assert(background.includes('case "schedule_watchdog"'), "Content scripts cannot schedule durable watchdog alarms.");

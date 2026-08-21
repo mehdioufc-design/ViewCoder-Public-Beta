@@ -2696,6 +2696,17 @@
         // passed, the next loop fires recovery immediately.
         continue;
       }
+      // The durable 43-second receipt alarm must do more than paint a notice.
+      // Release any stale provider Stop state first, then reclaim the exact same
+      // bridge job below. The stable requestKey makes this a receipt retry, not
+      // a second Studio/Blender mutation. If all eight receipts fail, the normal
+      // error tool-result message is written to the AI once so it can recover.
+      const providerReleasedForReceipt = await releaseStalledProviderReply();
+      diag("tool.receiptProviderRelease", {
+        name,
+        requestKey,
+        released: providerReleasedForReceipt,
+      });
       if (receiptRetries >= TOOL_RECEIPT_MAX_RETRIES) {
         r = {
           ok: false,
@@ -3016,23 +3027,45 @@
   //  AGENTIC LOOP
   // ════════════════════════════════════════════════════════════════════════
   async function releaseStalledProviderReply() {
-    let busy = false;
-    try {
-      busy = P.isHardGenerating?.() === true || P.isGenerating?.() === true;
-    } catch {}
-    if (!busy) return true;
-    diag("tool.resultReplyStoppingStall");
-    try { P.stopGeneration?.(); } catch {}
-    for (let attempt = 0; attempt < 12 && !A.stop; attempt += 1) {
-      await sleep(650);
-      try {
-        busy = P.isHardGenerating?.() === true || P.isGenerating?.() === true;
-      } catch {
-        busy = false;
+    // The progress watchdog owns this recovery decision. Do not short-circuit it
+    // from the provider's cosmetic generation flags: ChatGPT can leave its real
+    // native Stop control mounted while isGenerating()/isHardGenerating() both
+    // read false. That was why the correct continuation note remained queued
+    // until the user manually pressed Stop.
+    diag("tool.resultReplyStoppingStall", { forced: true });
+    let busy = true;
+    let editorReady = false;
+    let quietSince = 0;
+    for (let attempt = 0; attempt < 24 && !A.stop; attempt += 1) {
+      // Always make the first three stop attempts. Once provider state becomes
+      // trustworthy again, repeat at a bounded cadence only while it is busy.
+      // stopGeneration() only targets a native Stop control, so a disappeared
+      // control is a harmless no-op and can never submit the continuation text.
+      const shouldStop = attempt < 3 || (busy && attempt % 3 === 0);
+      if (shouldStop) {
+        diag("tool.resultReplyStopAttempt", { attempt: attempt + 1 });
+        try { P.stopGeneration?.(); } catch {}
       }
-      if (!busy) return true;
+      await sleep(300);
+      try {
+        busy =
+          P.isHardGenerating?.() === true ||
+          P.isGenerating?.() === true ||
+          P.isBusyNow?.() === true;
+      } catch {
+        busy = true;
+      }
+      try { editorReady = !!P.getEditor?.(); } catch { editorReady = false; }
+      if (!busy && editorReady) {
+        if (!quietSince) quietSince = Date.now();
+        // Require a stable idle composer, rather than trusting the first React
+        // frame after Stop. The next step writes the existing recovery prompt.
+        if (Date.now() - quietSince >= 900) return true;
+      } else {
+        quietSince = 0;
+      }
     }
-    return !busy;
+    return !busy && editorReady;
   }
 
   async function agentLoop(base) {
@@ -3108,7 +3141,18 @@
           ui.toast(
             `${P.displayName} ${res.kind === "stalled" ? "stopped making progress" : "did not begin replying"}. ViewCoder is continuing from the completed result (${attempt}/${TOOL_RESULT_REPLY_MAX_NUDGES})...`,
           );
-          if (res.kind === "stalled") await releaseStalledProviderReply();
+          if (
+            res.kind === "stalled" &&
+            !(await releaseStalledProviderReply())
+          ) {
+            diag("tool.resultReplyStopFailed", { attempt });
+            ui.banner(
+              "warn",
+              `${P.displayName} could not be stopped`,
+              "ViewCoder detected the stalled reply but the AI did not release its composer. The completed Studio or Blender result was kept and was not repeated.",
+            );
+            break;
+          }
           base = await submitToolResultWithRetries(
             res.kind === "stalled"
               ? "(System note: The immediately preceding ViewCoder tool result was delivered successfully. Your next assistant reply started but made no visible progress for 43 seconds and was stopped. Continue from that exact completed result. Do not repeat or re-run the completed Studio/Blender command. Any unfinished command in the interrupted reply was not dispatched; rewrite it once only if it is still the required next step, or give the final answer if the task is complete.)"
