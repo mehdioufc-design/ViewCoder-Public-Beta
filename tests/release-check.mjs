@@ -762,6 +762,16 @@ assert(
   `Command-boundary parser regression failed:\n${commandBoundaryCheck.stdout}\n${commandBoundaryCheck.stderr}`,
 );
 
+const commandGatewayCheck = spawnSync(
+  process.execPath,
+  [path.join(root, "tests/command-gateway.test.mjs")],
+  { encoding: "utf8" },
+);
+assert(
+  commandGatewayCheck.status === 0,
+  `Cross-provider command gateway regression failed:\n${commandGatewayCheck.stdout}\n${commandGatewayCheck.stderr}`,
+);
+
 const animationRigCheck = spawnSync(
   process.execPath,
   [path.join(root, "tests/animation-rig.test.mjs")],

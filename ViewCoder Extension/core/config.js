@@ -76,9 +76,10 @@ const ZS = (() => {
       names.join(", ") +
       ". Start over and write only the first command you need.",
     unknownTool: (name, valid) =>
-      `ERROR: unknown command "${name}". It does not exist. Valid commands are: ` +
+      `ERROR: Unknown command "${name}". ViewCoder did not run it because it is not in the live synchronized command catalog. ` +
+      "Rewrite the command once using an exact command name and exact parameter keys from this valid list: " +
       valid.join(", ") +
-      ". Use an exact name and parameter keys from the system prompt.",
+      ". Do not repeat the unknown command and do not merely describe the correction - emit the corrected command block now.",
     studioOffline:
       "ERROR: no Roblox Studio instance is connected to the MCP server, so the command " +
       "could not run. Roblox Studio is closed, has no place open, or its MCP server option " +

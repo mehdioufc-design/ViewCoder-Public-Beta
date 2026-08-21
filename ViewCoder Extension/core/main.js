@@ -3052,10 +3052,16 @@
     A.loopKey = null; // pinned by syncSessionState once this chat has an id + content
     let truncCount = 0;
     let toolFailureCount = 0;
+    let unknownCommandCorrections = 0;
     let awaitingToolResultReply = false;
     let toolResultReplyNudges = 0;
     let settledFinalAnswer = false;
     const MAX_TRUNC = 6;
+    // An unknown tool must never reach the bridge. Give the model one automatic
+    // catalog-anchored correction turn, then pause if it invents another name;
+    // this preserves the convenient self-repair without creating an unbounded
+    // unknown-command loop in a long conversation.
+    const MAX_UNKNOWN_COMMAND_CORRECTIONS = 1;
     // Re-send the command list after this many successful tool calls. Kept high
     // so the reminder does not bloat the context too often.
     const REMIND_TOOLS_EVERY = 20;
@@ -3121,8 +3127,9 @@
         // real command may be returned as plain text even though the live turn
         // already contains a complete tool envelope (the visible command card
         // then says "finished" but nothing executes). Re-read the live turn and
-        // promote only complete, known commands; ordinary prose and examples are
-        // left untouched.
+        // promote complete command envelopes. Catalog validation happens before
+        // bridge dispatch below, so an unknown name becomes a red activity card
+        // and a bounded correction request rather than silently becoming prose.
         const lateCommandParse =
           res.kind === "parse_error" &&
           ["luaOpener", "malformed", "unclosed", "envelope"].includes(res.reason);
@@ -3156,13 +3163,7 @@
             }
             if (lateCalls.length) break;
           }
-          if (
-            lateCalls.length > 0 &&
-            lateCalls.every((lateCall) =>
-              A.toolNames.has(lateCall.tool) ||
-              A.toolNames.has(bareToolName(lateCall.tool)),
-            )
-          ) {
+          if (lateCalls.length > 0) {
             diag(
               lateLuaParse
                 ? "response.promotedLateLuau"
@@ -3360,6 +3361,62 @@
             await sleep(250);
             continue;
           }
+          // Validate against the CURRENT catalog before painting a running card
+          // or touching the bridge. Refresh once because a server may have been
+          // connected after this chat's startup prompt was injected.
+          if (!A.toolNames.size || !A.toolNames.has(call.tool)) {
+            await ensureTools().catch(() => []);
+          }
+          // An empty catalog means the bridge itself could not supply a list;
+          // let runTool report that connection problem accurately instead of
+          // mislabelling every otherwise-valid command as unknown.
+          if (A.toolNames.size && !A.toolNames.has(call.tool)) {
+            const validNames = [...A.toolNames].sort((a, b) => a.localeCompare(b));
+            const feedback = ZS.FEEDBACK.unknownTool(call.tool || "command", validNames);
+            const exhausted = unknownCommandCorrections >= MAX_UNKNOWN_COMMAND_CORRECTIONS;
+            const detail = exhausted
+              ? "Unknown command · retry limit reached"
+              : "Unknown command · correcting automatically";
+            const category = ZS.toolCategory(call.tool || "command");
+            decorate.toolBox(
+              res.item,
+              call.tool || "Unknown command",
+              "err",
+              detail,
+              true,
+              feedback,
+              category,
+            );
+            rememberActivityVisual(res.item, {
+              name: call.tool || "Unknown command",
+              phase: "err",
+              detail,
+              body: feedback,
+              category,
+              kind: "tool",
+            });
+            rememberExecuted(res.item);
+            toolFailureCount++;
+            diag("tool.unknown", {
+              name: call.tool,
+              correction: unknownCommandCorrections + 1,
+              maxCorrections: MAX_UNKNOWN_COMMAND_CORRECTIONS,
+              validCount: validNames.length,
+              exhausted,
+            });
+            if (exhausted) {
+              ui.banner(
+                "warn",
+                "ViewCoder paused this task",
+                "This AI repeated an unknown command after ViewCoder supplied the live command catalog. Send a short follow-up to continue; no unknown command was sent to Studio or Blender.",
+              );
+              break;
+            }
+            unknownCommandCorrections++;
+            base = await submitAndGetBase(feedback);
+            continue;
+          }
+          unknownCommandCorrections = 0;
           // A tool ALREADY seen to return an image this session gets the "screen"
           // chip optimistically at run time (parity with the known screen_capture),
           // even though its name alone wouldn't reveal it. First-ever call of an
@@ -4317,13 +4374,37 @@
     classify(item, next, lastAssistant, generating, lastUser) {
       if (item.dataset.zloop) { this.ensureOwnedChip(item); return; } // loop owns it
       const txt = P.classifyText(item, ".zs-chip"); // excludes thinking AND our chip
+      const textHasCommandShape = P.isAssistantItem(item) && ZSParse.hasCommandShape(txt);
+      let renderedProviderCommand = null;
+      // Provider toolbars and syntax highlighters can pollute or omit the combined
+      // turn text while leaving a clean rendered command block behind. Probe that
+      // block for every provider when there is useful command-like DOM evidence.
+      // This is intentionally bounded to assistant turns with code UI so ordinary
+      // prose turns keep the sweep cheap even in very long conversations.
+      if (
+        P.isAssistantItem(item) &&
+        !textHasCommandShape &&
+        (
+          item === lastAssistant ||
+          item.dataset.zphase ||
+          item.querySelector("pre, [class*='code'], .cm-editor, .cm-content")
+        )
+      ) {
+        renderedProviderCommand = providerCommandCalls(item);
+      }
+      const hasRenderableCommand = textHasCommandShape || !!renderedProviderCommand;
+      const renderedCommandName =
+        renderedProviderCommand?.calls?.[0]?.tool ||
+        ZSParse.toolNameFromText(txt) ||
+        "command";
+      const commandEvidenceText = renderedProviderCommand?.text || txt;
 
       // A virtual list can replace the entire turn node, removing the chip,
       // zloop ownership and every dataset flag together. Restore the exact
       // off-DOM card state before ordinary classification gets a chance to
       // reinterpret a completed command as running (or expose its raw JSON).
       const rememberedVisual = P.isAssistantItem(item)
-        ? rememberedActivityVisual(item, txt)
+        ? rememberedActivityVisual(item, commandEvidenceText)
         : null;
       const rememberedLiveRun = !!(
         rememberedVisual?.phase === "run" &&
@@ -4334,7 +4415,7 @@
           (A.toolVisual.turnKey && turnKey(item) === A.toolVisual.turnKey)
         )
       );
-      if (rememberedVisual && (ZSParse.hasCommandShape(txt) || rememberedLiveRun)) {
+      if (rememberedVisual && (hasRenderableCommand || rememberedLiveRun)) {
         if (rememberedVisual.kind === "image-upload" && rememberedVisual.imageUpload) {
           this.imageUpload(item, rememberedVisual.imageUpload, true);
         } else {
@@ -4429,7 +4510,7 @@
       // text no longer "looks like" a command, but the VERY NEXT turn being
       // our injected result (`Output of 'name'`) is definitive proof it WAS
       // one - settle it from that evidence instead of leaving the chip gone.
-      if (P.isAssistantItem(item) && !ZSParse.hasCommandShape(txt) &&
+      if (P.isAssistantItem(item) && !hasRenderableCommand &&
           next && P.isUserItem(next)) {
         const nt = P.classifyText(next, ".zs-chip");
         const m = nt.match(/^\s*Output of '([^']+)'/);
@@ -4455,7 +4536,7 @@
       // asked for. Same principle as domHasZsSignal: a command shape alone is
       // not proof of a session. (Branches 1/2 above key off OUR OWN injected
       // markers, which only exist in real sessions, so they need no gate.)
-      if (P.isAssistantItem(item) && ZSParse.hasCommandShape(txt) &&
+      if (P.isAssistantItem(item) && hasRenderableCommand &&
           (A.started || A.starting)) {
         delete item.dataset.zLuaUnreadableAt;
         // Regenerate transition (see zRegenLen capture in regenResume): the site is
@@ -4471,8 +4552,7 @@
           const replaced = txt.length < baseLen - 8;      // old content wiped
           const expired = Date.now() - armedAt > 6000;    // safety fallback
           if (!replaced && !expired) {
-            const nm = ZSParse.toolNameFromText(txt) || "command";
-            this.toolBox(item, nm, "err", "stopped", false);
+            this.toolBox(item, renderedCommandName, "err", "stopped", false);
             return;
           }
           delete item.dataset.zRegenLen;
@@ -4502,13 +4582,13 @@
         const stopped = !regenerating && (
           item.dataset.zStopped === "1" ||
           (A.userStopped && item === lastAssistant) ||
-          isRememberedHalted(item, txt));
+          isRememberedHalted(item, commandEvidenceText));
         // Self-heal: a site re-render that swapped this turn's node wiped the
         // dataset marker - re-stamp it so the stop survives the next wipe of
         // the A.userStopped latch (a fresh user message clears it by design).
         if (stopped && item.dataset.zStopped !== "1") {
           item.dataset.zStopped = "1";
-          diag("chip.rehalt", { name: ZSParse.toolNameFromText(txt) });
+          diag("chip.rehalt", { name: renderedCommandName });
         }
         // The loop already SETTLED this very call (tool finished, we're waiting
         // for the model's next turn) but the site swapped the turn's DOM node,
@@ -4527,7 +4607,7 @@
               ? P.lastAssistantId() === A.toolSettle.id
               : A.toolSettle.count === P.assistantCount()) &&
             item === lastAssistant &&
-            ZSParse.toolNameFromText(txt) === A.toolName) {
+            renderedCommandName === A.toolName) {
           diag("chip.reown", { name: A.toolName, phase: A.toolSettle.phase });
           if (A.toolSettle.kind === "image-upload" && A.toolSettle.imageUpload) {
             this.imageUpload(item, A.toolSettle.imageUpload, true);
@@ -4553,7 +4633,7 @@
         //    to a blue spinner (the Arena "all chips restarted loading" report).
         const resultAfter = next && P.isUserItem(next) &&
           ZSParse.isInjectedFeedback(P.classifyText(next, ".zs-chip"));
-        const nm = ZSParse.toolNameFromText(txt);
+        const nm = renderedCommandName;
         // ZeroScript's settled-history signal is the injected result immediately
         // below a command. Make it authoritative for execute_luau: scroll/render
         // generation flicker must never turn a completed Lua card back to "run".
@@ -4583,7 +4663,7 @@
         // memory keeps this virtualization-safe - a scrolled-back turn whose result
         // detached is still known-executed and never mislabelled).
         const neverRun = !item.dataset.zloop && !resultAfter &&
-          !isRememberedExecuted(item, txt);
+          !isRememberedExecuted(item, commandEvidenceText);
         // Superseded orphan: abandoned command - a NEWER assistant turn exists below
         // it yet it never ran (e.g. stopped then regenerated into a fresh turn on
         // Qwen). It will never execute, so it must show neither a green ✓ "done" NOR
@@ -4622,7 +4702,7 @@
           // re-settles it red, matching what the loop painted live.
           if (ZSParse.isInjectedFeedback(nt) && feedbackIsError(nt)) {
             phase = "err"; detail = "error";
-            if (item.dataset.zphase !== "err") diag("chip.errSettle", { name: ZSParse.toolNameFromText(txt) });
+            if (item.dataset.zphase !== "err") diag("chip.errSettle", { name: renderedCommandName });
           }
         }
         // A command block that is VISIBLE right now (its hide classes live on
@@ -4681,7 +4761,7 @@
               isLast: item === lastAssistant, resultAfter,
               gen: generating, run: A.running, starting: A.starting,
               zStopped: item.dataset.zStopped === "1",
-              remembered: isRememberedHalted(item, txt),
+              remembered: isRememberedHalted(item, commandEvidenceText),
               lastGenAgoMs: Date.now() - A.lastGenAt,
               suspectDone,
               ...(P.genDebug ? { g: P.genDebug() } : {}),

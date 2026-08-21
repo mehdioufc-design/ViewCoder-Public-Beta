@@ -6,6 +6,12 @@ ViewCoder v1.0.0 is the first public beta. Major beta features may need updates
 as supported AI websites, Roblox Studio, Blender, and their MCP interfaces
 change.
 
+- Added a universal command gateway across every supported AI. Complete
+  rendered command blocks now become the existing ViewCoder activity card and
+  are validated against the live synchronized catalog before bridge dispatch.
+  Unknown commands are not executed: ViewCoder shows an Unknown command card,
+  requests one corrected command automatically, and then stops instead of
+  looping if the correction is still unknown.
 - Synchronized the gray Working cover to the live height of every supported
   provider composer, including multiline drafts and attachment rows, so it
   continues to cover the whole prompt bar as that prompt bar grows or shrinks.
